@@ -1,31 +1,31 @@
-pragma solidity 0.6.12;
-
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./TunaToken.sol";
+import "./CRTVToken.sol";
 
 
 interface IMigratorChef {
-    // Perform LP token migration from legacy UniswapV2 to TunaSwap.
+    // Perform LP token migration from legacy UniswapV2 to CRTVSwap.
     // Take the current LP token address and return the new LP token address.
     // Migrator should have full access to the caller's LP token.
     // Return the new LP token address.
     //
     // XXX Migrator must have allowance access to UniswapV2 LP tokens.
-    // TunaSwap must mint EXACTLY the same amount of TunaSwap LP tokens or
+    // CRTVSwap must mint EXACTLY the same amount of CRTVSwap LP tokens or
     // else something bad will happen. Traditional UniswapV2 does not
     // do that so be careful!
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-// MasterChef is the master of Tuna. He can make Tuna and he is a fair guy.
+// MasterChef is the mainspirationster of CRTV. He makes sure that the CRTV Community stays in order & fair.
 //
 // Note that it's ownable and the owner wields tremendous power. The ownership
-// will be transferred to a governance smart contract once TUNA is sufficiently
+// will be transferred to a governance smart contract once CRTV is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
@@ -38,13 +38,13 @@ contract MasterChef is Ownable {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
         //
-        // We do some fancy math here. Basically, any point in time, the amount of TUNAs
+        // We do some fancy math here. Basically, any point in time, the amount of CRTVs
         // entitled to a user but is pending to be distributed is:
         //
-        //   pending reward = (user.amount * pool.accTunaPerShare) - user.rewardDebt
+        //   pending reward = (user.amount * pool.accCRTVPerShare) - user.rewardDebt
         //
         // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accTunaPerShare` (and `lastRewardBlock`) gets updated.
+        //   1. The pool's `accCRTVPerShare` (and `lastRewardBlock`) gets updated.
         //   2. User receives the pending reward sent to his/her address.
         //   3. User's `amount` gets updated.
         //   4. User's `rewardDebt` gets updated.
@@ -53,19 +53,19 @@ contract MasterChef is Ownable {
     // Info of each pool.
     struct PoolInfo {
         IERC20 lpToken;           // Address of LP token contract.
-        uint256 allocPoint;       // How many allocation points assigned to this pool. TUNAs to distribute per block.
-        uint256 lastRewardBlock;  // Last block number that TUNAs distribution occurs.
-        uint256 accTunaPerShare; // Accumulated TUNAs per share, times 1e12. See below.
+        uint256 allocPoint;       // How many allocation points assigned to this pool. CRTVs to distribute per block.
+        uint256 lastRewardBlock;  // Last block number that CRTVs distribution occurs.
+        uint256 accCRTVPerShare; // Accumulated CRTVs per share, times 1e12. See below.
     }
 
-    // The TUNA TOKEN!
-    TunaToken public tuna;
+    // The CRTV TOKEN!
+    CRTVToken public crtv;
 
-    // Block number when bonus TUNA period ends.
+    // Block number when bonus CRTV period ends.
     uint256 public bonusEndBlock;
-    // TUNA tokens created per block.
-    uint256 public tunaPerBlock;
-    // Bonus muliplier for early tuna makers.
+    // CRTV tokens created per block.
+    uint256 public crtvPerBlock;
+    // Bonus muliplier for early crtv makers.
     uint256 public constant BONUS_MULTIPLIER = 10;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
@@ -76,7 +76,7 @@ contract MasterChef is Ownable {
     mapping (uint256 => mapping (address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when TUNA mining starts.
+    // The block number when CRTV mining starts.
     uint256 public startBlock;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
@@ -84,13 +84,13 @@ contract MasterChef is Ownable {
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
     constructor(
-        TunaToken _tuna,
-        uint256 _tunaPerBlock,
+        CRTVToken _crtv,
+        uint256 _crtvPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock
     ) public {
-        tuna = _tuna;
-        tunaPerBlock = _tunaPerBlock;
+        crtv = crtv;
+        crtvPerBlock = _crtvPerBlock;
         bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
     }
@@ -111,11 +111,11 @@ contract MasterChef is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accTunaPerShare: 0
+            accCRTVPerShare: 0
         }));
     }
 
-    // Update the given pool's TUNA allocation point. Can only be called by the owner.
+    // Update the given pool's CRTV allocation point. Can only be called by the owner.
     function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
@@ -154,18 +154,18 @@ contract MasterChef is Ownable {
         }
     }
 
-    // View function to see pending TUNAs on frontend.
-    function pendingTuna(uint256 _pid, address _user) external view returns (uint256) {
+    // View function to see pending CRTVs on frontend.
+    function pendingCRTV(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accTunaPerShare = pool.accTunaPerShare;
+        uint256 accCRTVPerShare = pool.accCRTVPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-            uint256 tunaReward = multiplier.mul(tunaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-            accTunaPerShare = accTunaPerShare.add(tunaReward.mul(1e12).div(lpSupply));
+            uint256 crtvReward = multiplier.mul(crtvPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+            accCRTVPerShare = accCRTVPerShare.add(crtvReward.mul(1e12).div(lpSupply));
         }
-        return user.amount.mul(accTunaPerShare).div(1e12).sub(user.rewardDebt);
+        return user.amount.mul(accCRTVPerShare).div(1e12).sub(user.rewardDebt);
     }
 
     // Update reward vairables for all pools. Be careful of gas spending!
@@ -188,24 +188,24 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 tunaReward = multiplier.mul(tunaPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        tuna.mint(address(this), tunaReward);
-        pool.accTunaPerShare = pool.accTunaPerShare.add(tunaReward.mul(1e12).div(lpSupply));
+        uint256 crtvReward = multiplier.mul(crtvPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
+        crtv.mint(address(this), crtvReward);
+        pool.accCRTVPerShare = pool.accCRTVPerShare.add(crtvReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to MasterChef for TUNA allocation.
+    // Deposit LP tokens to MasterChef for CRTV allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accTunaPerShare).div(1e12).sub(user.rewardDebt);
-            safeTunaTransfer(msg.sender, pending);
+            uint256 pending = user.amount.mul(pool.accCRTVPerShare).div(1e12).sub(user.rewardDebt);
+            safeCRTVTransfer(msg.sender, pending);
         }
         pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accTunaPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accCRTVPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
     }
 
@@ -215,10 +215,10 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending = user.amount.mul(pool.accTunaPerShare).div(1e12).sub(user.rewardDebt);
-        safeTunaTransfer(msg.sender, pending);
+        uint256 pending = user.amount.mul(pool.accCRTVPerShare).div(1e12).sub(user.rewardDebt);
+        safeCRTVTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accTunaPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(pool.accCRTVPerShare).div(1e12);
         pool.lpToken.safeTransfer(address(msg.sender), _amount);
         emit Withdraw(msg.sender, _pid, _amount);
     }
@@ -233,13 +233,13 @@ contract MasterChef is Ownable {
         user.rewardDebt = 0;
     }
 
-    // Safe tuna transfer function, just in case if rounding error causes pool to not have enough TUNAs.
-    function safeTunaTransfer(address _to, uint256 _amount) internal {
-        uint256 tunaBal = tuna.balanceOf(address(this));
-        if (_amount > tunaBal) {
-            tuna.transfer(_to, tunaBal);
+    // Safe crtv transfer function, just in case if rounding error causes pool to not have enough CRTVs.
+    function safeCRTVTransfer(address _to, uint256 _amount) internal {
+        uint256 crtvBal = crtv.balanceOf(address(this));
+        if (_amount > crtvBal) {
+            crtv.transfer(_to, crtvBal);
         } else {
-            tuna.transfer(_to, _amount);
+            crtv.transfer(_to, _amount);
         }
     }
 }

@@ -8,11 +8,11 @@
 //
 // Ctrl+f for XXX to see all the modifications.
 
-// XXX: pragma solidity ^0.5.16;
-pragma solidity 0.6.12;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 // XXX: import "./SafeMath.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract Timelock {
     using SafeMath for uint;
@@ -24,6 +24,7 @@ contract Timelock {
     event ExecuteTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature,  bytes data, uint eta);
     event QueueTransaction(bytes32 indexed txHash, address indexed target, uint value, string signature, bytes data, uint eta);
 
+// needs to be modified to our purpose and operation //
     uint public constant GRACE_PERIOD = 14 days;
     uint public constant MINIMUM_DELAY = 2 days;
     uint public constant MAXIMUM_DELAY = 30 days;
@@ -37,7 +38,7 @@ contract Timelock {
 
 
     constructor() public {
-        admin = 0x0FaEF44d1373F6fdE75926E4564baB5B2d645944;
+        admin = 0x0FaEF44d1373F6fdE75926E4564baB5B2d645944; // needs to be changed //
         delay = 172800;
         admin_initialized = false;
     }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // COPIED FROM https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/GovernorAlpha.sol
 // Copyright 2020 Compound Labs, Inc.
 // Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -10,23 +11,23 @@
 // uint96s are changed to uint256s for simplicity and safety.
 
 // XXX: pragma solidity ^0.5.16;
-pragma solidity 0.6.12;
+pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-import "./TunaToken.sol";
+import "./CRTVtoken.sol";
 
 contract GovernorAlpha {
     /// @notice The name of this contract
     // XXX: string public constant name = "Compound Governor Alpha";
-    string public constant name = "Tuna Governor Alpha";
+    string public constant name = "CRTV Governor Alpha";
 
     /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed
     // XXX: function quorumVotes() public pure returns (uint) { return 400000e18; } // 400,000 = 4% of Comp
-    function quorumVotes() public view returns (uint) { return tuna.totalSupply() / 25; } // 4% of Supply
+    function quorumVotes() public view returns (uint) { return crtv.totalSupply() / 25; } // 4% of Supply
 
     /// @notice The number of votes required in order for a voter to become a proposer
     // function proposalThreshold() public pure returns (uint) { return 100000e18; } // 100,000 = 1% of Comp
-    function proposalThreshold() public view returns (uint) { return tuna.totalSupply() / 100; } // 1% of Supply
+    function proposalThreshold() public view returns (uint) { return crtv.totalSupply() / 100; } // 1% of Supply
 
     /// @notice The maximum number of actions that can be included in a proposal
     function proposalMaxOperations() public pure returns (uint) { return 10; } // 10 actions
@@ -42,7 +43,7 @@ contract GovernorAlpha {
 
     /// @notice The address of the Compound governance token
     // XXX: CompInterface public comp;
-    TunaToken public tuna;
+    CRTVToken public crtv;
 
     /// @notice The address of the Governor Guardian
     address public guardian;
@@ -145,14 +146,14 @@ contract GovernorAlpha {
     /// @notice An event emitted when a proposal has been executed in the Timelock
     event ProposalExecuted(uint id);
 
-    constructor(address timelock_, address tuna_, address guardian_) public {
+    constructor(address timelock_, address crtv_, address guardian_) public {
         timelock = TimelockInterface(timelock_);
-        tuna = TunaToken(tuna_);
+        crtv = CRTVToken(crtv_);
         guardian = guardian_;
     }
 
     function propose(address[] memory targets, uint[] memory values, string[] memory signatures, bytes[] memory calldatas, string memory description) public returns (uint) {
-        require(tuna.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
+        require(crtv.getPriorVotes(msg.sender, sub256(block.number, 1)) > proposalThreshold(), "GovernorAlpha::propose: proposer votes below proposal threshold");
         require(targets.length == values.length && targets.length == signatures.length && targets.length == calldatas.length, "GovernorAlpha::propose: proposal function information arity mismatch");
         require(targets.length != 0, "GovernorAlpha::propose: must provide actions");
         require(targets.length <= proposalMaxOperations(), "GovernorAlpha::propose: too many actions");
@@ -222,7 +223,7 @@ contract GovernorAlpha {
         require(state != ProposalState.Executed, "GovernorAlpha::cancel: cannot cancel executed proposal");
 
         Proposal storage proposal = proposals[proposalId];
-        require(msg.sender == guardian || tuna.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
+        require(msg.sender == guardian || crtv.getPriorVotes(proposal.proposer, sub256(block.number, 1)) < proposalThreshold(), "GovernorAlpha::cancel: proposer above threshold");
 
         proposal.canceled = true;
         for (uint i = 0; i < proposal.targets.length; i++) {
@@ -281,7 +282,7 @@ contract GovernorAlpha {
         Proposal storage proposal = proposals[proposalId];
         Receipt storage receipt = proposal.receipts[voter];
         require(receipt.hasVoted == false, "GovernorAlpha::_castVote: voter already voted");
-        uint256 votes = tuna.getPriorVotes(voter, proposal.startBlock);
+        uint256 votes = crtv.getPriorVotes(voter, proposal.startBlock);
 
         if (support) {
             proposal.forVotes = add256(proposal.forVotes, votes);
